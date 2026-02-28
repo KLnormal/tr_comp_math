@@ -27,8 +27,7 @@ namespace math {
             }
         }
         matrix(const matrix&) = default;
-        template <typename T>
-        matrix(const std::initializer_list <T> &val) {
+        matrix(const std::initializer_list <float> &val) {
             BSP_ASSERT(val.size() == _row * _col);
             auto p = val.begin();
             for (int i = 0; i < _row * _col; i++) data[i] = *(p++);
