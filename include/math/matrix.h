@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstring>
 
 #include "bsp/def.h"
 
@@ -315,6 +316,17 @@ namespace math {
             return ret;
         }
 
+        void load(const float *ptr) {
+            memcpy(data.data(), ptr, _row * _col * sizeof(float));
+        }
+
+        void save(float *ptr) const {
+            memcpy(ptr, data.data(), _row * _col * sizeof(float));
+        }
+
+        static constexpr matrix eye() {
+            return matrix(1);
+        }
         static constexpr matrix zeros() {
             return matrix(0);
         }
