@@ -21,7 +21,10 @@ namespace math {
         static constexpr int rows() noexcept { return _row; }
         static constexpr int cols() noexcept { return _col; }
 
-        explicit matrix(const float &val = 0) {
+        explicit matrix(const float arr[_row * _col]) { load(arr); }
+        explicit matrix(const std::array <float, _row * _col> &arr) { load(arr); }
+        template <typename T = float>
+        explicit matrix(const T &val = 0) {
             data.fill(0);
             if (val == 0) return;
             for (int i = 0; i < std::min(_row, _col); i++) {
@@ -49,13 +52,15 @@ namespace math {
             BSP_ASSERT(0 <= r and r < _row and 0 <= c and c < _col);
             return data[r * _col + c];
         }
-        float *operator[] (int r) {
-            BSP_ASSERT(0 <= r and r < _row);
-            return &data[r * _col];
+
+        // NOTE: 20260614 修改 [i] 为取 data 中的第 i 个元素, 上面括号取值不变
+        float &operator[] (int idx) {
+            BSP_ASSERT(0 <= idx and idx < _row * _col);
+            return data[idx];
         }
-        const float *operator[] (int r) const {
-            BSP_ASSERT(0 <= r and r < _row);
-            return &data[r * _col];
+        const float &operator[] (int idx) const {
+            BSP_ASSERT(0 <= idx and idx < _row * _col);
+            return data[idx];
         }
 
         // 基本运算
@@ -116,7 +121,7 @@ namespace math {
             for (int i = 0; i < _row; i++) {
                 for (int j = 0; j < el; j++) {
                     for (int k = 0; k < _col; k++) {
-                        ret[i][j] += (*this)[i][k] * oth[k][j];
+                        ret(i, j) += (*this)(i, k) * oth(k, j);
                     }
                 }
             }
@@ -180,9 +185,9 @@ namespace math {
             for (int i = 0; i < _row; i++) {
                 for (int j = 0; j < _col + _c; j++) {
                     if (j < _col)
-                        ret[i][j] = (*this)[i][j];
+                        ret(i, j) = (*this)(i, j);
                     else
-                        ret[i][j] = oth[i][j - _col];
+                        ret(i, j) = oth(i, j - _col);
                 }
             }
             return ret;
@@ -191,7 +196,7 @@ namespace math {
             matrix <_col, _row> ret;
             for (int i = 0; i < _row; i++) {
                 for (int j = 0; j < _col; j++) {
-                    ret[j][i] = (*this)[i][j];
+                    ret(j, i) = (*this)(i, j);
                 }
             }
             return ret;
@@ -199,7 +204,7 @@ namespace math {
         [[nodiscard]] float trace() const {
             float ret = 0;
             for (int i = 0; i < std::min(_row, _col); i++) {
-                ret += data[i * _col + i];
+                ret += (*this)(i, i);
             }
             return ret;
         }
@@ -320,8 +325,16 @@ namespace math {
             memcpy(data.data(), ptr, _row * _col * sizeof(float));
         }
 
+        void load(const std::array <float, _row * _col> &arr) {
+            data = arr;
+        }
+
         void save(float *ptr) const {
             memcpy(ptr, data.data(), _row * _col * sizeof(float));
+        }
+
+        void save(std::array <float, _row * _col> &arr) {
+            arr = data;
         }
 
         static constexpr matrix eye() {

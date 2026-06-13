@@ -181,57 +181,40 @@ namespace math {
             }
             float modulus = 1.0f / std::sqrt(modulus_square);
             float q0 = data[0] * modulus, q1 = data[1] * modulus, q2 = data[2] * modulus, q3 = data[3] * modulus;
-            ret[0][0] = std::atan2(2.0f * (q0 * q3 + q1 * q2), 1.0f - 2.0f * (q2 * q2 + q3 * q3));
+
+            ret[0] = std::atan2(2.0f * (q0 * q3 + q1 * q2), 1.0f - 2.0f * (q2 * q2 + q3 * q3));
             float sin_pitch = 2.0f * (q0 * q2 - q3 * q1);
             if (std::abs(sin_pitch) > 1.0f) {
-                ret[1][0] = sin_pitch > 0 ? M_PI / 2.0f : -M_PI / 2.0f;
+                ret[1] = sin_pitch > 0 ? M_PI / 2.0f : -M_PI / 2.0f;
             } else {
-                ret[1][0] = std::asin(sin_pitch);
+                ret[1] = std::asin(sin_pitch);
             }
-            ret[2][0] = std::atan2(2.0f * (q0 * q1 + q2 * q3), 1.0f - 2.0f * (q1 * q1 + q2 * q2));
+            ret[2] = std::atan2(2.0f * (q0 * q1 + q2 * q3), 1.0f - 2.0f * (q1 * q1 + q2 * q2));
             return ret;
         }
 
         [[nodiscard]] matrix <4, 4> get_self_matrix() const {
-            matrix <4, 4> ret;
-            ret[0][0] = data[0];
-            ret[0][1] = -data[1];
-            ret[0][2] = -data[2];
-            ret[0][3] = -data[3];
-            ret[1][0] = data[1];
-            ret[1][1] = data[0];
-            ret[1][2] = -data[3];
-            ret[1][3] = data[2];
-            ret[2][0] = data[2];
-            ret[2][1] = data[3];
-            ret[2][2] = data[0];
-            ret[2][3] = -data[1];
-            ret[3][0] = data[3];
-            ret[3][1] = -data[2];
-            ret[3][2] = data[1];
-            ret[3][3] = data[0];
-            return ret;
+            return matrix <4, 4> {
+                data[0], -data[1], -data[2], -data[3],
+                data[1], data[0], -data[3], data[2],
+                data[2], data[3], data[0], -data[1],
+                data[3], -data[2], data[1], data[0]
+            };
         }
 
         [[nodiscard]] matrix <3, 3> get_rotation_matrix() const {
-            matrix <3, 3> ret;
             float modulus_square = data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3];
             if (modulus_square < eps) {
-                return matrix <3, 3> (1);
+                return matrix <3, 3>::eye();
             }
             float modulus = 1.0f / std::sqrt(modulus_square);
             float q0 = data[0] * modulus, q1 = data[1] * modulus, q2 = data[2] * modulus, q3 = data[3] * modulus;
 
-            ret[0][0] = 1.0f - 2.0f * (q2 * q2 + q3 * q3);
-            ret[0][1] = 2.0f * (q1 * q2 - q0 * q3);
-            ret[0][2] = 2.0f * (q1 * q3 + q0 * q2);
-            ret[1][0] = 2.0f * (q1 * q2 + q0 * q3);
-            ret[1][1] = 1.0f - 2.0f * (q1 * q1 + q3 * q3);
-            ret[1][2] = 2.0f * (q2 * q3 - q0 * q1);
-            ret[2][0] = 2.0f * (q1 * q3 - q0 * q2);
-            ret[2][1] = 2.0f * (q2 * q3 + q0 * q1);
-            ret[2][2] = 1.0f - 2.0f * (q1 * q1 + q2 * q2);
-            return ret;
+            return math::matrix <3, 3> {
+                1.f - 2.f * (q2 * q2 + q3 * q3), 2.f * (q1 * q2 - q0 * q3), 2.f * (q1 * q3 + q0 * q2),
+                2.f * (q1 * q2 + q0 * q3), 1.f - 2.f * (q1 * q1 + q3 * q3), 2.f * (q2 * q3 - q0 * q1),
+                2.f * (q1 * q3 - q0 * q2), 2.f * (q2 * q3 + q0 * q1), 1.f - 2.f * (q1 * q1 + q2 * q2)
+            };
         }
     };
 }
