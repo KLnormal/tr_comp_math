@@ -375,6 +375,45 @@ namespace math {
             ret.data.fill(1);
             return ret;
         }
+
+        // Rot matrix
+        template <int _r = _row, int _c = _col, int _dim = _r>
+        static constexpr std::enable_if_t <_r == _c, matrix> rot_z(float rad) {
+            static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
+            matrix<_dim,_dim> temp = matrix<_dim, _dim>::eye();
+            temp[0][0] = cosf(rad); temp[0][1] = -sinf(rad);
+            temp[1][0] = sinf(rad); temp[1][1] = cosf(rad);
+            return temp;
+        }
+
+        template <int _r = _row, int _c = _col, int _dim = _r>
+        static constexpr std::enable_if_t <_r == _c, matrix> rot_y(float rad) {
+            static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
+            matrix<_dim,_dim> temp = matrix<_dim, _dim>::eye();
+            temp[0][0] = cosf(rad); temp[0][2] = sinf(rad);
+            temp[2][0] = -sinf(rad); temp[2][2] = cosf(rad);
+            return temp;
+        }
+
+        template <int _r = _row, int _c = _col, int _dim = _r>
+        static constexpr std::enable_if_t <_r == _c, matrix> rot_x(float rad) {
+            static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
+            matrix<_dim,_dim> temp = matrix<_dim, _dim>::eye();
+            temp[1][1] = cosf(rad); temp[1][2] = -sinf(rad);
+            temp[2][1] = sinf(rad); temp[2][2] = cosf(rad);
+            return temp;
+        }
+
+        template <int _r = _row, int _c = _col, int _dim = _r>
+        static constexpr std::enable_if_t <_r == _c, matrix> rot_euler(float rol, float pit, float yaw) {
+            static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
+            matrix<_dim,_dim> matrix_rol = matrix::rot_x<_dim>(rol);
+            matrix<_dim,_dim> matrix_pit = matrix::rot_y<_dim>(pit);
+            matrix<_dim,_dim> matrix_yaw = matrix::rot_z<_dim>(yaw);
+            matrix<_dim,_dim> matrix_euler = matrix_yaw*matrix_pit*matrix_rol;
+            return matrix_euler;
+        }
+
     protected:
         std::array <float, _row * _col> data;
     };
