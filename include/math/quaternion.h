@@ -12,7 +12,11 @@
 namespace math {
     class quaternion : public matrix <4, 1> {
         using quat_t = matrix <4, 1>;
-        static constexpr float eps = 1e-6;
+        static constexpr float eps = 1e-12f;
+
+        [[nodiscard]] float norm_square() const {
+            return data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3];
+        }
     public:
         explicit quaternion(const quat_t &mat) : quat_t(mat) { }
         explicit quaternion(float real = 1, float imag_x = 0, float imag_y = 0, float imag_z = 0) : quat_t({real, imag_x, imag_y, imag_z}) {}
@@ -27,13 +31,28 @@ namespace math {
             return data[idx];
         }
 
-        using quat_t::operator=, quat_t::operator+, quat_t::operator-, quat_t::operator/;
+        using quat_t::operator=;
+
+        quaternion operator+ (const quaternion &oth) const {
+            return quaternion(data[0] + oth.data[0], data[1] + oth.data[1], data[2] + oth.data[2], data[3] + oth.data[3]);
+        }
+        quaternion operator- () const {
+            return quaternion(-data[0], -data[1], -data[2], -data[3]);
+        }
+        quaternion operator- (const quaternion &oth) const {
+            return quaternion(data[0] - oth.data[0], data[1] - oth.data[1], data[2] - oth.data[2], data[3] - oth.data[3]);
+        }
 
         quaternion operator* (const float &val) const {
             return quaternion(data[0] * val, data[1] * val, data[2] * val, data[3] * val);
         }
         friend quaternion operator* (const float &val, const quaternion &quat) {
             return quat * val;
+        }
+
+        quaternion operator/ (const float val) const {
+            BSP_ASSERT(std::abs(val) > eps);
+            return *this * (1.0f / val);
         }
 
         quaternion operator* (const quaternion &oth) const {
@@ -61,35 +80,24 @@ namespace math {
             );
         }
 
-        quaternion operator/ (const quaternion &oth) {
-            float modulus_square = oth.data[0] * oth.data[0] + oth.data[1] * oth.data[1] + oth.data[2] * oth.data[2] + oth.data[3] * oth.data[3];
-            BSP_ASSERT(modulus_square > eps);
-            modulus_square = 1.0f / modulus_square;
-            float q0q0 = data[0] *  oth.data[0];
-            float q0q1 = data[0] * -oth.data[1];
-            float q0q2 = data[0] * -oth.data[2];
-            float q0q3 = data[0] * -oth.data[3];
-            float q1q0 = data[1] *  oth.data[0];
-            float q1q1 = data[1] * -oth.data[1];
-            float q1q2 = data[1] * -oth.data[2];
-            float q1q3 = data[1] * -oth.data[3];
-            float q2q0 = data[2] *  oth.data[0];
-            float q2q1 = data[2] * -oth.data[1];
-            float q2q2 = data[2] * -oth.data[2];
-            float q2q3 = data[2] * -oth.data[3];
-            float q3q0 = data[3] *  oth.data[0];
-            float q3q1 = data[3] * -oth.data[1];
-            float q3q2 = data[3] * -oth.data[2];
-            float q3q3 = data[3] * -oth.data[3];
-            return quaternion(
-                (q0q0 - q1q1 - q2q2 - q3q3) * modulus_square,
-                (q0q1 + q1q0 + q2q3 - q3q2) * modulus_square,
-                (q0q2 - q1q3 + q2q0 + q3q1) * modulus_square,
-                (q0q3 + q1q2 - q2q1 + q3q0) * modulus_square
-            );
+        quaternion operator/ (const quaternion &oth) const {
+            return *this * oth.inv();
         }
 
-        using quat_t::operator+=, quat_t::operator-=;
+        quaternion &operator+= (const quaternion &oth) {
+            data[0] += oth.data[0];
+            data[1] += oth.data[1];
+            data[2] += oth.data[2];
+            data[3] += oth.data[3];
+            return *this;
+        }
+        quaternion &operator-= (const quaternion &oth) {
+            data[0] -= oth.data[0];
+            data[1] -= oth.data[1];
+            data[2] -= oth.data[2];
+            data[3] -= oth.data[3];
+            return *this;
+        }
         quaternion &operator*= (const float &val) {
             data[0] *= val;
             data[1] *= val;
@@ -98,52 +106,11 @@ namespace math {
             return *this;
         }
         quaternion &operator*= (const quaternion &oth) {
-            const float q0q0 = data[0] * oth.data[0];
-            const float q0q1 = data[0] * oth.data[1];
-            const float q0q2 = data[0] * oth.data[2];
-            const float q0q3 = data[0] * oth.data[3];
-            const float q1q0 = data[1] * oth.data[0];
-            const float q1q1 = data[1] * oth.data[1];
-            const float q1q2 = data[1] * oth.data[2];
-            const float q1q3 = data[1] * oth.data[3];
-            const float q2q0 = data[2] * oth.data[0];
-            const float q2q1 = data[2] * oth.data[1];
-            const float q2q2 = data[2] * oth.data[2];
-            const float q2q3 = data[2] * oth.data[3];
-            const float q3q0 = data[3] * oth.data[0];
-            const float q3q1 = data[3] * oth.data[1];
-            const float q3q2 = data[3] * oth.data[2];
-            const float q3q3 = data[3] * oth.data[3];
-            data[0] = q0q0 - q1q1 - q2q2 - q3q3;
-            data[1] = q0q1 + q1q0 + q2q3 - q3q2;
-            data[2] = q0q2 - q1q3 + q2q0 + q3q1;
-            data[3] = q0q3 + q1q2 - q2q1 + q3q0;
+            *this = *this * oth;
             return *this;
         }
         quaternion &operator/= (const quaternion &oth) {
-            float modulus_square = oth.data[0] * oth.data[0] + oth.data[1] * oth.data[1] + oth.data[2] * oth.data[2] + oth.data[3] * oth.data[3];
-            BSP_ASSERT(modulus_square > eps);
-            modulus_square = 1.0f / modulus_square;
-            float q0q0 = data[0] *  oth.data[0];
-            float q0q1 = data[0] * -oth.data[1];
-            float q0q2 = data[0] * -oth.data[2];
-            float q0q3 = data[0] * -oth.data[3];
-            float q1q0 = data[1] *  oth.data[0];
-            float q1q1 = data[1] * -oth.data[1];
-            float q1q2 = data[1] * -oth.data[2];
-            float q1q3 = data[1] * -oth.data[3];
-            float q2q0 = data[2] *  oth.data[0];
-            float q2q1 = data[2] * -oth.data[1];
-            float q2q2 = data[2] * -oth.data[2];
-            float q2q3 = data[2] * -oth.data[3];
-            float q3q0 = data[3] *  oth.data[0];
-            float q3q1 = data[3] * -oth.data[1];
-            float q3q2 = data[3] * -oth.data[2];
-            float q3q3 = data[3] * -oth.data[3];
-            data[0] = (q0q0 - q1q1 - q2q2 - q3q3) * modulus_square;
-            data[1] = (q0q1 + q1q0 + q2q3 - q3q2) * modulus_square;
-            data[2] = (q0q2 - q1q3 + q2q0 + q3q1) * modulus_square;
-            data[3] = (q0q3 + q1q2 - q2q1 + q3q0) * modulus_square;
+            *this = *this / oth;
             return *this;
         }
 
@@ -159,79 +126,54 @@ namespace math {
             return quaternion(data[0], -data[1], -data[2], -data[3]);
         };
         [[nodiscard]] quaternion inv() const {
-            float modulus_square = data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3];
-            if (modulus_square < eps) {
-                return quaternion(1, 0, 0, 0);
-            }
-            modulus_square = 1.0f / modulus_square;
+            const float square = norm_square();
+            BSP_ASSERT(square > eps);
+            if (square <= eps) return quaternion();
+            const float reciprocal = 1.0f / square;
             return quaternion(
-                data[0] * modulus_square,
-                -data[1] * modulus_square,
-                -data[2] * modulus_square,
-                -data[3] * modulus_square
+                data[0] * reciprocal,
+                -data[1] * reciprocal,
+                -data[2] * reciprocal,
+                -data[3] * reciprocal
             );
         }
 
         // yaw pitch roll
         [[nodiscard]] matrix<3, 1> get_euler_angle() const {
             matrix<3, 1> ret;
-            float modulus_square = data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3];
-            if (modulus_square < eps) {
-                return ret;
-            }
-            float modulus = 1.0f / std::sqrt(modulus_square);
-            float q0 = data[0] * modulus, q1 = data[1] * modulus, q2 = data[2] * modulus, q3 = data[3] * modulus;
-            ret[0][0] = std::atan2(2.0f * (q0 * q3 + q1 * q2), 1.0f - 2.0f * (q2 * q2 + q3 * q3));
-            float sin_pitch = 2.0f * (q0 * q2 - q3 * q1);
-            if (std::abs(sin_pitch) > 1.0f) {
-                ret[1][0] = sin_pitch > 0 ? M_PI / 2.0f : -M_PI / 2.0f;
-            } else {
-                ret[1][0] = std::asin(sin_pitch);
-            }
-            ret[2][0] = std::atan2(2.0f * (q0 * q1 + q2 * q3), 1.0f - 2.0f * (q1 * q1 + q2 * q2));
+            const float square = norm_square();
+            if (square <= eps) return ret;
+
+            const float q0 = data[0], q1 = data[1], q2 = data[2], q3 = data[3];
+            ret[0] = std::atan2(2.0f * (q0 * q3 + q1 * q2), square - 2.0f * (q2 * q2 + q3 * q3));
+            const float sin_pitch = 2.0f * (q0 * q2 - q3 * q1) / square;
+            ret[1] = std::asin(std::clamp(sin_pitch, -1.0f, 1.0f));
+            ret[2] = std::atan2(2.0f * (q0 * q1 + q2 * q3), square - 2.0f * (q1 * q1 + q2 * q2));
             return ret;
         }
 
         [[nodiscard]] matrix <4, 4> get_self_matrix() const {
-            matrix <4, 4> ret;
-            ret[0][0] = data[0];
-            ret[0][1] = -data[1];
-            ret[0][2] = -data[2];
-            ret[0][3] = -data[3];
-            ret[1][0] = data[1];
-            ret[1][1] = data[0];
-            ret[1][2] = -data[3];
-            ret[1][3] = data[2];
-            ret[2][0] = data[2];
-            ret[2][1] = data[3];
-            ret[2][2] = data[0];
-            ret[2][3] = -data[1];
-            ret[3][0] = data[3];
-            ret[3][1] = -data[2];
-            ret[3][2] = data[1];
-            ret[3][3] = data[0];
-            return ret;
+            return matrix <4, 4> {
+                data[0], -data[1], -data[2], -data[3],
+                data[1], data[0], -data[3], data[2],
+                data[2], data[3], data[0], -data[1],
+                data[3], -data[2], data[1], data[0]
+            };
         }
 
         [[nodiscard]] matrix <3, 3> get_rotation_matrix() const {
-            matrix <3, 3> ret;
-            float modulus_square = data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3];
-            if (modulus_square < eps) {
-                return matrix <3, 3> (1);
-            }
-            float modulus = 1.0f / std::sqrt(modulus_square);
-            float q0 = data[0] * modulus, q1 = data[1] * modulus, q2 = data[2] * modulus, q3 = data[3] * modulus;
+            const float square = norm_square();
+            if (square <= eps) return matrix <3, 3>::eye();
 
-            ret[0][0] = 1.0f - 2.0f * (q2 * q2 + q3 * q3);
-            ret[0][1] = 2.0f * (q1 * q2 - q0 * q3);
-            ret[0][2] = 2.0f * (q1 * q3 + q0 * q2);
-            ret[1][0] = 2.0f * (q1 * q2 + q0 * q3);
-            ret[1][1] = 1.0f - 2.0f * (q1 * q1 + q3 * q3);
-            ret[1][2] = 2.0f * (q2 * q3 - q0 * q1);
-            ret[2][0] = 2.0f * (q1 * q3 - q0 * q2);
-            ret[2][1] = 2.0f * (q2 * q3 + q0 * q1);
-            ret[2][2] = 1.0f - 2.0f * (q1 * q1 + q2 * q2);
-            return ret;
+            const float scale = 2.0f / square;
+            const float q0 = data[0], q1 = data[1], q2 = data[2], q3 = data[3];
+            const float q1s = q1 * scale, q2s = q2 * scale, q3s = q3 * scale;
+
+            return math::matrix <3, 3> {
+                1.f - q2 * q2s - q3 * q3s, q1 * q2s - q0 * q3s, q1 * q3s + q0 * q2s,
+                q1 * q2s + q0 * q3s, 1.f - q1 * q1s - q3 * q3s, q2 * q3s - q0 * q1s,
+                q1 * q3s - q0 * q2s, q2 * q3s + q0 * q1s, 1.f - q1 * q1s - q2 * q2s
+            };
         }
     };
 }

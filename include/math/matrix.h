@@ -8,20 +8,39 @@
 #pragma once
 
 #include <array>
+#include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <type_traits>
+#include <utility>
 
 #include "bsp/def.h"
 
 namespace math {
     template <int _row, int _col>
     class matrix {
-        static constexpr float eps = 1e-10;
+        template <int, int>
+        friend class matrix;
+
+        static constexpr float eps = 1e-10f;
+
+        [[nodiscard]] constexpr bool is_identity() const noexcept {
+            if constexpr (_row != _col) return false;
+            for (int r = 0; r < _row; r++) {
+                for (int c = 0; c < _col; c++) {
+                    if (data[r * _col + c] != (r == c ? 1.f : 0.f)) return false;
+                }
+            }
+            return true;
+        }
     public:
         static constexpr int rows() noexcept { return _row; }
         static constexpr int cols() noexcept { return _col; }
 
-        explicit matrix(const float &val = 0) {
+        explicit matrix(const float arr[_row * _col]) { load(arr); }
+        explicit matrix(const std::array <float, _row * _col> &arr) { load(arr); }
+        template <typename T = float>
+        explicit matrix(const T &val = 0) {
             data.fill(0);
             if (val == 0) return;
             for (int i = 0; i < std::min(_row, _col); i++) {
@@ -49,13 +68,15 @@ namespace math {
             BSP_ASSERT(0 <= r and r < _row and 0 <= c and c < _col);
             return data[r * _col + c];
         }
-        float *operator[] (int r) {
-            BSP_ASSERT(0 <= r and r < _row);
-            return &data[r * _col];
+
+        // NOTE: 20260614 修改 [i] 为取 data 中的第 i 个元素, 上面括号取值不变
+        float &operator[] (int idx) {
+            BSP_ASSERT(0 <= idx and idx < _row * _col);
+            return data[idx];
         }
-        const float *operator[] (int r) const {
-            BSP_ASSERT(0 <= r and r < _row);
-            return &data[r * _col];
+        const float &operator[] (int idx) const {
+            BSP_ASSERT(0 <= idx and idx < _row * _col);
+            return data[idx];
         }
 
         // 基本运算
@@ -112,11 +133,19 @@ namespace math {
         }
         template <int el>
         constexpr matrix <_row, el> operator* (const matrix <_col, el> &oth) const {
+            if constexpr (_row == _col) {
+                if (is_identity()) return oth;
+            }
+
             matrix <_row, el> ret(0);
             for (int i = 0; i < _row; i++) {
-                for (int j = 0; j < el; j++) {
-                    for (int k = 0; k < _col; k++) {
-                        ret[i][j] += (*this)[i][k] * oth[k][j];
+                const int dst = i * el;
+                const int lhs = i * _col;
+                for (int k = 0; k < _col; k++) {
+                    const float val = data[lhs + k];
+                    const int rhs = k * el;
+                    for (int j = 0; j < el; j++) {
+                        ret.data[dst + j] += val * oth.data[rhs + j];
                     }
                 }
             }
@@ -124,29 +153,30 @@ namespace math {
         }
         constexpr matrix operator/ (const float &val) const {
             BSP_ASSERT(std::abs(val) > eps);
+            const float reciprocal = 1.0f / val;
             matrix ret;
             for (int i = 0; i < _row * _col; i++) {
-                ret.data[i] = data[i] / val;
+                ret.data[i] = data[i] * reciprocal;
             }
             return ret;
         }
-        constexpr matrix &operator+= (float val) const {
+        constexpr matrix &operator+= (float val) {
             for (int i = 0; i < _row * _col; i++) data[i] += val;
             return *this;
         }
-        constexpr matrix &operator+= (const matrix &oth) const {
+        constexpr matrix &operator+= (const matrix &oth) {
             for (int i = 0; i < _row * _col; i++) {
                 data[i] += oth.data[i];
             }
             return *this;
         }
-        constexpr matrix &operator-= (const float &val) const {
+        constexpr matrix &operator-= (const float &val) {
             for (int i = 0; i < _row * _col; i++) {
                 data[i] -= val;
             }
             return *this;
         }
-        constexpr matrix &operator-= (const matrix &oth) const {
+        constexpr matrix &operator-= (const matrix &oth) {
             for (int i = 0; i < _row * _col; i++) {
                 data[i] -= oth.data[i];
             }
@@ -158,10 +188,11 @@ namespace math {
             }
             return *this;
         }
-        constexpr matrix &operator/= (const float &val) const {
+        constexpr matrix &operator/= (const float &val) {
             BSP_ASSERT(std::abs(val) > eps);
+            const float reciprocal = 1.0f / val;
             for (int i = 0; i < _row * _col; i++) {
-                data[i] /= val;
+                data[i] *= reciprocal;
             }
             return *this;
         }
@@ -180,9 +211,9 @@ namespace math {
             for (int i = 0; i < _row; i++) {
                 for (int j = 0; j < _col + _c; j++) {
                     if (j < _col)
-                        ret[i][j] = (*this)[i][j];
+                        ret(i, j) = (*this)(i, j);
                     else
-                        ret[i][j] = oth[i][j - _col];
+                        ret(i, j) = oth(i, j - _col);
                 }
             }
             return ret;
@@ -191,7 +222,7 @@ namespace math {
             matrix <_col, _row> ret;
             for (int i = 0; i < _row; i++) {
                 for (int j = 0; j < _col; j++) {
-                    ret[j][i] = (*this)[i][j];
+                    ret(j, i) = (*this)(i, j);
                 }
             }
             return ret;
@@ -199,7 +230,7 @@ namespace math {
         [[nodiscard]] float trace() const {
             float ret = 0;
             for (int i = 0; i < std::min(_row, _col); i++) {
-                ret += data[i * _col + i];
+                ret += (*this)(i, i);
             }
             return ret;
         }
@@ -242,11 +273,12 @@ namespace math {
             }
             if constexpr (_r == 2) {
                 const float a = data[0], b = data[1], c = data[2], d = data[3];
-                if (std::abs(a * d - b * c) < eps) {
+                const float det = a * d - b * c;
+                if (std::abs(det) < eps) {
                     BSP_ASSERT(false);
                     return matrix(1);
                 }
-                return matrix({d, -b, -c, a}) / (a * d - b * c);
+                return matrix({d, -b, -c, a}) / det;
             }
             if (std::abs(data[0]) < eps) {
                 BSP_ASSERT(false);
@@ -320,8 +352,16 @@ namespace math {
             memcpy(data.data(), ptr, _row * _col * sizeof(float));
         }
 
+        void load(const std::array <float, _row * _col> &arr) {
+            data = arr;
+        }
+
         void save(float *ptr) const {
             memcpy(ptr, data.data(), _row * _col * sizeof(float));
+        }
+
+        void save(std::array <float, _row * _col> &arr) const {
+            arr = data;
         }
 
         static constexpr matrix eye() {
