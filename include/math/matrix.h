@@ -381,8 +381,8 @@ namespace math {
         static constexpr std::enable_if_t <_r == _c, matrix> rot_z(float rad) {
             static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
             matrix<_dim,_dim> temp = matrix<_dim, _dim>::eye();
-            temp[0][0] = cosf(rad); temp[0][1] = -sinf(rad);
-            temp[1][0] = sinf(rad); temp[1][1] = cosf(rad);
+            temp(0,0) = cosf(rad); temp(0,1) = -sinf(rad);
+            temp(1,0) = sinf(rad); temp(1,1) = cosf(rad);
             return temp;
         }
 
@@ -390,8 +390,8 @@ namespace math {
         static constexpr std::enable_if_t <_r == _c, matrix> rot_y(float rad) {
             static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
             matrix<_dim,_dim> temp = matrix<_dim, _dim>::eye();
-            temp[0][0] = cosf(rad); temp[0][2] = sinf(rad);
-            temp[2][0] = -sinf(rad); temp[2][2] = cosf(rad);
+            temp(0,0) = cosf(rad); temp(0,2) = sinf(rad);
+            temp(2,0) = -sinf(rad); temp(2,2) = cosf(rad);
             return temp;
         }
 
@@ -399,8 +399,8 @@ namespace math {
         static constexpr std::enable_if_t <_r == _c, matrix> rot_x(float rad) {
             static_assert(_dim >= 3 && _dim <= 4, "dimension can not bigger than '4' or smaller than '3'");
             matrix<_dim,_dim> temp = matrix<_dim, _dim>::eye();
-            temp[1][1] = cosf(rad); temp[1][2] = -sinf(rad);
-            temp[2][1] = sinf(rad); temp[2][2] = cosf(rad);
+            temp(1,1) = cosf(rad); temp(1,2) = -sinf(rad);
+            temp(2,1) = sinf(rad); temp(2,2) = cosf(rad);
             return temp;
         }
 
